@@ -1,0 +1,72 @@
+CREATE TABLE lote (
+  id INTEGER NOT NULL PRIMARY KEY,
+  codigo TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  hectareas REAL NOT NULL,
+  cultivo TEXT NOT NULL,
+  valle TEXT NOT NULL,
+  campaniaCerrada INTEGER NOT NULL,
+  dosisMaxima REAL NOT NULL
+);
+
+CREATE TABLE labor (
+  id INTEGER NOT NULL PRIMARY KEY,
+  loteId INTEGER NOT NULL,
+  tipo TEXT NOT NULL,
+  fecha TEXT NOT NULL,
+  responsable TEXT NOT NULL,
+  cantidad REAL NOT NULL,
+  observacion TEXT NOT NULL,
+  pendiente INTEGER NOT NULL
+);
+
+observarLaboresPorLote:
+SELECT * FROM labor WHERE loteId = ? ORDER BY fecha DESC;
+
+siguienteIdLocal:
+SELECT COALESCE(MIN(id), 0) FROM labor;
+
+seleccionarTodosLotes:
+SELECT * FROM lote ORDER BY nombre;
+
+observarTodosLotes:
+SELECT * FROM lote ORDER BY nombre;
+
+observarLotesFiltrados:
+SELECT * FROM lote
+WHERE (? IS NULL OR valle = ?)
+  AND (? = 0 OR campaniaCerrada = 0)
+ORDER BY nombre;
+
+observarPendientesPorLote:
+SELECT loteId, COUNT(*) AS total FROM labor WHERE pendiente = 1 GROUP BY loteId;
+
+seleccionarLaborPorId:
+SELECT * FROM labor WHERE id = ?;
+
+insertarLote:
+INSERT OR REPLACE INTO lote(id, codigo, nombre, hectareas, cultivo, valle, campaniaCerrada, dosisMaxima) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+insertarLabor:
+INSERT OR REPLACE INTO labor(id, loteId, tipo, fecha, responsable, cantidad, observacion, pendiente) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+eliminarLabor:
+DELETE FROM labor WHERE id = ?;
+
+marcarLaborPendiente:
+UPDATE labor SET pendiente = 1 WHERE id = ?;
+
+observarLaboresPendientes:
+SELECT * FROM labor WHERE pendiente = 1 AND id < 0 ORDER BY fecha, id;
+
+reemplazarIdLabor:
+UPDATE labor SET id = ?, pendiente = 0 WHERE id = ?;
+
+marcarLaborSincronizada:
+UPDATE labor SET pendiente = 0 WHERE id = ?;
+
+eliminarLaborPendiente:
+DELETE FROM labor WHERE id = ?;
+
+eliminarTodasLasLabores:
+DELETE FROM labor;
