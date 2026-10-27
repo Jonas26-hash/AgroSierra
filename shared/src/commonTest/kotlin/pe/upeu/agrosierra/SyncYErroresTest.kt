@@ -15,7 +15,7 @@ class SyncYErroresTest {
     }
 
     @Test fun errorApiConservaMensaje() {
-        val err = ErrorApi.NoAutorizado("sin permiso")
+        val err = ErrorApi.Desconocido("sin permiso")
         assertEquals("sin permiso", err.message)
     }
 
