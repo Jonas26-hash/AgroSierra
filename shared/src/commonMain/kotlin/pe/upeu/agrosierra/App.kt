@@ -45,8 +45,16 @@ fun App() {
 }
 
 @Composable private fun GlassCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier, shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color(0xAA183027)), border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(Color(0x66FFFFFF), Color(0x11B7F36B))))) {
-        Column(Modifier.padding(20.dp), content = content)
+    Card(
+        modifier,
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0x991A3429)),
+        border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(Color(0x88FFFFFF), Color(0x33B7F36B), Color(0x11FFFFFF)))),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+    ) {
+        Box(Modifier.background(Brush.linearGradient(listOf(Color(0x22FFFFFF), Color(0x00FFFFFF))))) {
+            Column(Modifier.padding(22.dp), content = content)
+        }
     }
 }
 
