@@ -13,6 +13,7 @@ fun appModule(): List<Module> = listOf(
     module {
         single { crearClienteHttp(leerToken = { get<AlmacenSeguro>().obtenerToken() }) }
         single { AuthRepositoryImpl(get(), get()) }
-        single<AgroRepository> { AgroRepositoryImpl(get(), get()) }
+        single { AgroRepositoryImpl(get(), get()) }
+        single<AgroRepository> { get<AgroRepositoryImpl>() }
     }
 )
