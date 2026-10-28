@@ -1,4 +1,4 @@
-package pe.upeu.agrosierra
+package pe.upeu.agrosierra.data.local
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences

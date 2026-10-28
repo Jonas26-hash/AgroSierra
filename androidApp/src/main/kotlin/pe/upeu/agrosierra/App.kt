@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.util.Log
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import pe.upeu.agrosierra.data.remote.MapeoErrores
@@ -33,6 +34,7 @@ import pe.upeu.agrosierra.domain.model.TipoLabor
 fun App() {
     val auth: AuthRepositoryImpl = koinInject()
     val agro: AgroRepositoryImpl = koinInject()
+    SideEffect { android.util.Log.e("AgroCampo", "App() composed, auth=$auth, agro=$agro") }
     val scope = rememberCoroutineScope()
     var session by remember { mutableStateOf<Sesion?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -102,8 +104,6 @@ private fun LoginScreen(onLogin: (String, String) -> Unit, error: String, busy: 
                 Text(if (busy) "Conectando..." else "Entrar  ->")
             }
         }
-        Spacer(Modifier.height(18.dp))
-        Text("Acceso de demostracion: tecnico1 / Agro2026*", color = Color(0xFF84988E), fontSize = 12.sp)
     }
 }
 
@@ -121,6 +121,8 @@ private fun HomeScreen(session: Sesion, repo: AgroRepositoryImpl, onLogout: () -
     var loading by remember { mutableStateOf(false) }
     var syncing by remember { mutableStateOf(false) }
     var showNew by remember { mutableStateOf(false) }
+    var editLabor by remember { mutableStateOf<Labor?>(null) }
+    var deleteLabor by remember { mutableStateOf<Labor?>(null) }
     var showProfile by remember { mutableStateOf(false) }
     var lastSync by remember { mutableStateOf<String?>(null) }
     var syncResumen by remember { mutableStateOf("") }
@@ -146,18 +148,84 @@ private fun HomeScreen(session: Sesion, repo: AgroRepositoryImpl, onLogout: () -
         }
     }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
+    Scaffold(
+        containerColor = Color.Transparent,
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color(0xFF10251D),
+                contentColor = Color(0xFFB7F36B),
+                modifier = Modifier.navigationBarsPadding()
+            ) {
+                NavigationBarItem(
+                    selected = selected == null && !showProfile,
+                    onClick = { selected = null; showProfile = false },
+                    icon = { Text("🌾", fontSize = 16.sp) },
+                    label = { Text("Campo", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFB7F36B),
+                        selectedTextColor = Color(0xFFB7F36B),
+                        unselectedIconColor = Color(0xFF84988E),
+                        unselectedTextColor = Color(0xFF84988E),
+                        indicatorColor = Color(0xFF1A3429)
+                    )
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            syncing = true
+                            error = ""
+                            syncResumen = ""
+                            try {
+                                val enviados = repo.sincronizar()
+                                val recibidos = repo.refrescar()
+                                lastSync = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date())
+                                syncResumen = "Enviadas $enviados · Recibidas $recibidos"
+                                message = "Sincronizacion completa"
+                            } catch (e: Exception) {
+                                error = mensajeDe(e, onSessionExpired)
+                            }
+                            syncing = false
+                        }
+                    },
+                    enabled = !syncing,
+                    icon = { Text(if (syncing) "⟳" else "🔄", fontSize = 16.sp) },
+                    label = { Text(if (syncing) "Sync..." else "Sincronizar", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        unselectedIconColor = Color(0xFF84988E),
+                        unselectedTextColor = Color(0xFF84988E),
+                        indicatorColor = Color(0xFF1A3429)
+                    )
+                )
+                NavigationBarItem(
+                    selected = showProfile,
+                    onClick = { showProfile = true; selected = null },
+                    icon = { Text("👤", fontSize = 16.sp) },
+                    label = { Text("Perfil", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFB7F36B),
+                        selectedTextColor = Color(0xFFB7F36B),
+                        unselectedIconColor = Color(0xFF84988E),
+                        unselectedTextColor = Color(0xFF84988E),
+                        indicatorColor = Color(0xFF1A3429)
+                    )
+                )
+            }
+        }
+    ) { innerPadding ->
+    Column(Modifier.fillMaxSize().padding(innerPadding).statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column { Text("AGROSIERRA", color = Color(0xFFB7F36B), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp); Text("Control de campo", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold) }
             Text("◉  ${session.usuario}", color = Color(0xFFD6E9DF), modifier = Modifier.clickable { showProfile = !showProfile })
         }
-        if (showProfile) GlassCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-            Text("Perfil de campo", color = Color.White, fontWeight = FontWeight.Bold)
-            Text("${session.usuario} · ${session.rol}", color = Color(0xFFB5C7BE))
-            Text("${session.privilegios.size} privilegios activos", color = Color(0xFFB7F36B))
-            TextButton(onClick = onLogout) { Text("Cerrar sesion") }
-        }
-        if (selected == null) {
+        if (showProfile) {
+            GlassCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Text("Perfil de campo", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("${session.usuario} · ${session.rol}", color = Color(0xFFB5C7BE))
+                Text("${session.privilegios.size} privilegios activos", color = Color(0xFFB7F36B))
+                TextButton(onClick = onLogout) { Text("Cerrar sesion") }
+            }
+        } else if (selected == null) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Text("Padron de lotes", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
@@ -189,7 +257,7 @@ private fun HomeScreen(session: Sesion, repo: AgroRepositoryImpl, onLogout: () -
                     Text("Sin lotes guardados. Desliza para sincronizar.", color = Color(0xFFB5C7BE))
                 }
             } else {
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+                LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(lotes, key = { it.id }) { lote ->
                         GlassCard(Modifier.fillMaxWidth().clickable { selected = lote }) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -221,7 +289,7 @@ private fun HomeScreen(session: Sesion, repo: AgroRepositoryImpl, onLogout: () -
             if (labores.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Sin labores registradas", color = Color(0xFFB5C7BE)) }
             } else {
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(labores, key = { it.id }) { labor ->
                         GlassCard(Modifier.fillMaxWidth()) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -230,33 +298,20 @@ private fun HomeScreen(session: Sesion, repo: AgroRepositoryImpl, onLogout: () -
                             }
                             Text("${labor.cantidad} · ${labor.responsable}", color = Color.White)
                             if (labor.observacion.isNotBlank()) Text(labor.observacion, color = Color(0xFFB5C7BE))
+                            if ("LABOR_EDITAR" in session.privilegios && !labor.pendiente) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = { editLabor = labor }) { Text("Editar") }
+                                    if ("LABOR_ELIMINAR" in session.privilegios) {
+                                        TextButton(onClick = { deleteLabor = labor }) { Text("Eliminar") }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("◈  CAMPO", color = Color(0xFFB7F36B), fontSize = 11.sp)
-            TextButton(onClick = {
-                scope.launch {
-                    syncing = true
-                    error = ""
-                    syncResumen = ""
-                    try {
-                        val enviados = repo.sincronizar()
-                        val recibidos = repo.refrescar()
-                        lastSync = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date())
-                        syncResumen = "Enviadas $enviados · Recibidas $recibidos"
-                        message = "Sincronizacion completa"
-                    } catch (e: Exception) {
-                        error = mensajeDe(e, onSessionExpired)
-                    }
-                    syncing = false
-                }
-            }, enabled = !syncing) { Text(if (syncing) "⟳  Sincronizando..." else "⟳  Sincronizar") }
-            TextButton(onClick = { showProfile = !showProfile }) { Text("Perfil  ◉") }
-        }
+    }
     }
     if (showNew && selected != null) NewLaborDialog(selected!!, onDismiss = { showNew = false }, onSave = { type, amount, note ->
         scope.launch {
@@ -269,6 +324,42 @@ private fun HomeScreen(session: Sesion, repo: AgroRepositoryImpl, onLogout: () -
             }
         }
     })
+    editLabor?.let { labor ->
+        EditLaborDialog(labor, onDismiss = { editLabor = null }, onSave = { type, amount, note ->
+            scope.launch {
+                try {
+                    repo.actualizarLabor(labor.id, labor.loteId, type, labor.fecha, labor.responsable, amount, note)
+                    message = "Labor actualizada"
+                    editLabor = null
+                    error = ""
+                } catch (e: Exception) {
+                    error = mensajeDe(e, onSessionExpired)
+                }
+            }
+        })
+    }
+    deleteLabor?.let { labor ->
+        AlertDialog(
+            onDismissRequest = { deleteLabor = null },
+            title = { Text("Eliminar labor") },
+            text = { Text("¿Eliminar la labor ${labor.tipo.name} de ${labor.cantidad}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        try {
+                            repo.eliminarLabor(labor.id)
+                            message = "Labor eliminada"
+                            deleteLabor = null
+                            error = ""
+                        } catch (e: Exception) {
+                            error = mensajeDe(e, onSessionExpired)
+                        }
+                    }
+                }) { Text("Eliminar") }
+            },
+            dismissButton = { TextButton(onClick = { deleteLabor = null }) { Text("Cancelar") } }
+        )
+    }
 }
 
 @Composable
@@ -280,6 +371,42 @@ private fun NewLaborDialog(lote: Lote, onDismiss: () -> Unit, onSave: (TipoLabor
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Registrar labor · ${lote.codigo}") },
+        text = {
+            Column {
+                var expanded by remember { mutableStateOf(false) }
+                Box {
+                    OutlinedButton(onClick = { expanded = true }) { Text(type.name) }
+                    DropdownMenu(expanded, { expanded = false }) {
+                        TipoLabor.entries.forEach { DropdownMenuItem(text = { Text(it.name) }, onClick = { type = it; expanded = false }) }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(amount, { amount = it; validationError = "" }, label = { Text("Cantidad aplicada") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), isError = validationError.isNotBlank())
+                if (validationError.isNotBlank()) Text(validationError, color = Color(0xFFFF998F), fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(note, { note = it }, label = { Text("Observacion") })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val v = amount.toDoubleOrNull()
+                if (v == null) { validationError = "Cantidad invalida"; return@TextButton }
+                onSave(type, v, note)
+            }) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@Composable
+private fun EditLaborDialog(labor: Labor, onDismiss: () -> Unit, onSave: (TipoLabor, Double, String) -> Unit) {
+    var type by remember { mutableStateOf(labor.tipo) }
+    var amount by remember { mutableStateOf(labor.cantidad.toString()) }
+    var note by remember { mutableStateOf(labor.observacion) }
+    var validationError by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar labor") },
         text = {
             Column {
                 var expanded by remember { mutableStateOf(false) }

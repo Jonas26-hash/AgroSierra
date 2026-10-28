@@ -1,9 +1,29 @@
+# Gradle y artefactos de compilación
 .gradle/
 build/
+androidApp/build/
+shared/build/
 local.properties
+
+# IDE y sistema
 *.iml
 .idea/
 .DS_Store
-androidApp/build/
-shared/build/
-gradle/wrapper/gradle-wrapper.jar
+
+# Entregables, evidencias y binarios locales (no se publican)
+entregables/
+*.apk
+*.aab
+*.db
+*.db-journal
+*.log
+.kotlin/
+*.bak
+
+# Configuración privada
+.env
+*.jks
+*.keystore
+
+# Informes académicos locales
+INFORME_ENTREGA.md

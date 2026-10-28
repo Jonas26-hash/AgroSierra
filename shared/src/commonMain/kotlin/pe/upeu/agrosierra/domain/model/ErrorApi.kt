@@ -9,5 +9,7 @@ sealed class ErrorApi : Exception() {
     class Servidor : ErrorApi()
     class SinConexion : ErrorApi()
     class TiempoAgotado : ErrorApi()
-    class Desconocido(val mensaje: String) : ErrorApi()
+    class Desconocido(val mensaje: String) : ErrorApi() {
+        override val message: String? get() = mensaje
+    }
 }

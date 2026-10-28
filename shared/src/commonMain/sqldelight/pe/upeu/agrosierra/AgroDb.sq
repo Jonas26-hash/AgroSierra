@@ -33,10 +33,7 @@ observarTodosLotes:
 SELECT * FROM lote ORDER BY nombre;
 
 observarLotesFiltrados:
-SELECT * FROM lote
-WHERE (? IS NULL OR valle = ?)
-  AND (? = 0 OR campaniaCerrada = 0)
-ORDER BY nombre;
+SELECT * FROM lote ORDER BY nombre;
 
 observarPendientesPorLote:
 SELECT loteId, COUNT(*) AS total FROM labor WHERE pendiente = 1 GROUP BY loteId;
@@ -66,6 +63,9 @@ marcarLaborSincronizada:
 UPDATE labor SET pendiente = 0 WHERE id = ?;
 
 eliminarLaborPendiente:
+DELETE FROM labor WHERE id = ?;
+
+eliminarLaborPorId:
 DELETE FROM labor WHERE id = ?;
 
 eliminarTodasLasLabores:
