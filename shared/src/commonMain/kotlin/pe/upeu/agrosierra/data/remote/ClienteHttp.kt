@@ -16,6 +16,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 expect fun createHttpClientEngine(): io.ktor.client.engine.HttpClientEngine
+expect fun platformApiBaseUrl(): String
 
 fun crearClienteHttp(
     leerToken: suspend () -> String? = { null },
@@ -41,9 +42,9 @@ fun crearClienteHttp(
         expectSuccess = false
         install(Auth) {
             bearer {
-                loadTokens { leerToken()?.let { BearerTokens(it, null) } }
+                loadTokens { leerToken()?.let { BearerTokens(it, "") } }
                 sendWithoutRequest { request ->
-                    val path = request.url.encodedPath
+                    val path = request.url.toString()
                     !path.contains("/auth/login")
                 }
             }
@@ -57,5 +58,5 @@ fun crearClienteHttp(
 }
 
 object ApiConfig {
-    const val baseUrl = "http://10.0.2.2:8080/"
+    val baseUrl: String = platformApiBaseUrl()
 }
