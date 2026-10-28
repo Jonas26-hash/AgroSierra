@@ -4,8 +4,10 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +36,18 @@ class AgroRepositoryImpl(private val local: BaseLocal, private val http: HttpCli
     private val q get() = local.db.agroDbQueries
 
     override fun observarLotes(valle: String?, soloAbiertos: Boolean): Flow<List<Lote>> =
-        q.observarLotesFiltrados(valle, valle, if (soloAbiertos) 1L else 0L).asFlow().mapToList(Dispatchers.Default).map { rows ->
-            rows.map { Lote(it.id, it.codigo, it.nombre, it.hectareas, it.cultivo, it.valle, it.campaniaCerrada != 0L, it.dosisMaxima) }
+        q.observarTodosLotes().asFlow().mapToList(Dispatchers.Default).map { rows ->
+            rows.filter { row ->
+                val coincideValle = valle.isNullOrBlank() || row.valle == valle
+                val coincideAbierto = !soloAbiertos || row.campaniaCerrada == 0L
+                coincideValle && coincideAbierto
+            }.map { Lote(it.id, it.codigo, it.nombre, it.hectareas, it.cultivo, it.valle, it.campaniaCerrada != 0L, it.dosisMaxima) }
+        }
+
+    fun observarLotesPorBusqueda(busqueda: String): Flow<List<Lote>> =
+        q.observarTodosLotes().asFlow().mapToList(Dispatchers.Default).map { rows ->
+            rows.filter { it.nombre.contains(busqueda, true) || it.codigo.contains(busqueda, true) }
+                .map { Lote(it.id, it.codigo, it.nombre, it.hectareas, it.cultivo, it.valle, it.campaniaCerrada != 0L, it.dosisMaxima) }
         }
 
     override fun observarLabores(loteId: Long): Flow<List<Labor>> =
@@ -46,6 +58,27 @@ class AgroRepositoryImpl(private val local: BaseLocal, private val http: HttpCli
     override suspend fun registrarLabor(loteId: Long, tipo: TipoLabor, fecha: String, responsable: String, cantidad: Double, observacion: String) {
         val idLocal = minOf(q.siguienteIdLocal().executeAsOne(), 0L) - 1L
         q.transaction { q.insertarLabor(idLocal, loteId, tipo.name, fecha, responsable, cantidad, observacion, 1L) }
+    }
+
+    suspend fun actualizarLabor(id: Long, loteId: Long, tipo: TipoLabor, fecha: String, responsable: String, cantidad: Double, observacion: String): Labor {
+        val response = http.put("api/v1/labores/$id") {
+            setBody(LaborRequestDto(loteId, tipo.name, fecha, responsable, cantidad, observacion))
+        }
+        if (!response.status.isSuccess()) throw MapeoErrores.mapear(response)
+        val real = response.body<LaborDto>()
+        q.transaction {
+            q.eliminarLaborPorId(id)
+            q.insertarLabor(real.id, real.loteId, real.tipo, real.fecha, real.responsable, real.cantidad, real.observacion, 0L)
+        }
+        return real.dominio(false)
+    }
+
+    suspend fun eliminarLabor(id: Long) {
+        val response = http.delete("api/v1/labores/$id")
+        if (!response.status.isSuccess()) throw MapeoErrores.mapear(response)
+        q.transaction {
+            q.eliminarLaborPorId(id)
+        }
     }
 
     override suspend fun refrescar(): Int {

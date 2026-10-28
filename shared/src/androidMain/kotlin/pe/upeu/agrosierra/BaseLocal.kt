@@ -9,7 +9,7 @@ class BaseLocalAndroid(private val context: Context) {
     fun crearDriver() = AndroidSqliteDriver(AgroDb.Schema, context, "agro.db")
     fun crearBaseLocal(): BaseLocalAndroidDb {
         val driver = crearDriver()
-        return BaseLocalAndroidDb(BaseLocal(driver), driver)
+        return BaseLocalAndroidDb(BaseLocal(driver))
     }
 }
 
