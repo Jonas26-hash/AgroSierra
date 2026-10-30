@@ -122,6 +122,12 @@ El backend siembra los usuarios `tecnico1`, `jefe1` y `admin`. La contraseña de
 
 Versiones principales: Gradle Wrapper 9.1.0, AGP 8.5.2, Kotlin 2.1.0, Compose BOM 2024.09.02, Ktor 2.3.12, Koin 3.5.6 y SQLDelight 2.0.2. `minSdk = 24`, `compileSdk = 34`, `targetSdk = 35`.
 
+## Backend relacionado
+
+Este proyecto móvil utiliza el backend desarrollado con Spring Boot.
+
+- Backend: https://github.com/Jonas26-hash/AgroSierraBackend
+
 ## Ejecución
 
 Windows:
@@ -169,15 +175,3 @@ Resultado en la validación local: **12 pruebas, 0 fallos**.
 - `DominioTest` (4): mapeo de `LoteDto` a `Lote` y marcado de labores pendientes.
 - `SyncYErroresTest` (4): identificadores negativos y positivos, mensaje de `ErrorApi` y enumeración `TipoLabor`.
 - `SyncOrdenTest` (4): conversión de `LaborDto`, mapeo de un `400` con `validationErrors` mediante `MockEngine`, marcado de una labor pendiente y una comprobación de orden que registra manualmente los pasos `SUBIR_PENDIENTE` y `DESCARGAR_LOTES`. Esta última no ejecuta `AgroRepositoryImpl`.
-
-No hay todavía una prueba con driver SQLDelight en memoria ni una prueba que ejercite el orden real de `AgroRepositoryImpl.sincronizar()`.
-
-## Limitaciones conocidas
-
-- No existe una capa `presentation` con `ViewModel`, `StateFlow` y `UiState`; el estado de pantalla vive en los composables de `App.kt`.
-- `SincronizarAutomaticoUseCase` y `NetworkConnectivityManager` existen, pero no están registrados en Koin ni conectados a la interfaz. La sincronización es manual.
-- La edición y la eliminación de labores requieren conexión; no se guardan como operaciones pendientes.
-- La búsqueda se filtra dentro del composable. `observarLotesPorBusqueda` existe en el repositorio, pero no se usa.
-- Ante un `404` se muestra el mensaje, pero no se refresca automáticamente el listado.
-- Ante un `500` se muestra un mensaje breve; no hay un botón de reintento dedicado, aunque se puede volver a sincronizar manualmente.
-- La aplicación no expone el cierre de campaña ni consulta `/api/v1/usuarios/me`.
